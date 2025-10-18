@@ -1,25 +1,92 @@
-from models import CarCreate, CarRead
-from In_memory_data import _next_id, _lock, _store
+from sqlalchemy.orm import Session
+from models import CarCreate, CarRead, CarUpdate, Car
+from database import SessionLocal
 
 
-def _create_car(payload: CarCreate)->CarRead:
-    global _next_id
-    with _lock:
-        cid = _next_id
-        _next_id += 1
-        car = CarRead(id=cid, **payload.model_dump())
-        _store[cid] = car
-        return car
+def _create_car(payload: CarCreate) -> CarRead:
+    db = SessionLocal()
+    try:
+        car = Car(
+            brand=payload.brand,
+            model=payload.model,
+            year=payload.year
+        )
+        db.add(car)
+        db.commit()
+        db.refresh(car)
+        return CarRead.from_orm(car)
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error creating car: {e}")
+        raise
+    finally:
+        db.close()
 
-def _get_car_by_id(cid: int)->CarRead:
-    with _lock:
-        return _store.get(cid)
 
-def _delete_car(cid: int):
-    with _lock:
-        return _store.pop(cid, None)
+def _get_car_by_id(cid: int) -> CarRead:
+    db = SessionLocal()
+    try:
+        car = db.query(Car).filter(Car.id == cid).first()
+        if car:
+            return CarRead.from_orm(car)
+        return None
+    finally:
+        db.close()
 
-def _list_cars():
-    with _lock:
-        return list(_store.values())
 
+def _delete_car(cid: int) -> bool:
+    db = SessionLocal()
+    try:
+        car = db.query(Car).filter(Car.id == cid).first()
+        if car:
+            db.delete(car)
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+
+def _list_cars() -> list[CarRead]:
+    db = SessionLocal()
+    try:
+        cars = db.query(Car).all()
+        return [CarRead.from_orm(car) for car in cars]
+    finally:
+        db.close()
+
+
+def _patch_car(cid: int, payload: CarUpdate) -> CarRead:
+    db = SessionLocal()
+    try:
+        car = db.query(Car).filter(Car.id == cid).first()
+        if not car:
+            return None
+        
+        car.brand = payload.brand
+        car.model = payload.model
+        car.year = payload.year
+        
+        db.commit()
+        db.refresh(car)
+        return CarRead.from_orm(car)
+    finally:
+        db.close()
+
+
+def _replace_car(cid: int, payload: CarCreate) -> CarRead:
+    db = SessionLocal()
+    try:
+        car = db.query(Car).filter(Car.id == cid).first()
+        if not car:
+            return None
+        
+        car.brand = payload.brand
+        car.model = payload.model
+        car.year = payload.year
+        
+        db.commit()
+        db.refresh(car)
+        return CarRead.from_orm(car)
+    finally:
+        db.close()

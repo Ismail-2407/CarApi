@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from typing import List, Optional
 from models import CarRead, CarCreate
 from car_repository_service import _create_car, _get_car_by_id, _delete_car, _list_cars
+from database import create_tables
+
+create_tables()
 
 app = FastAPI()
 
