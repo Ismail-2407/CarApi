@@ -17,7 +17,6 @@ class Car(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
-# Pydantic Models
 class CarBase(BaseModel):
     brand: str = Field(min_length=1, max_length=100)
     model: str = Field(min_length=1, max_length=100)

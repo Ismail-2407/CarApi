@@ -17,7 +17,7 @@ def _create_car(payload: CarCreate) -> CarRead:
         return CarRead.from_orm(car)
     except Exception as e:
         db.rollback()
-        print(f"❌ Error creating car: {e}")
+        print(f"Error creating car: {e}")
         raise
     finally:
         db.close()
